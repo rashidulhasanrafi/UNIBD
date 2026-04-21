@@ -4,11 +4,17 @@ import { calculateGPA, calculateCGPA, GRADING_SCALES } from "@/src/lib/calculati
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/src/components/ui/Card";
 import { Button } from "@/src/components/ui/Button";
 import { Input } from "@/src/components/ui/Input";
+import { ConfirmModal } from "@/src/components/ui/ConfirmModal";
 import { Plus, Trash2, GraduationCap, School } from "lucide-react";
 
 export function CgpaTracker() {
   const { semesters, universityScale, setUniversityScale, addSemester, updateSemester, deleteSemester } = useStore();
   const [newSemName, setNewSemName] = useState("");
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; onConfirm: () => void; message: string }>({
+    isOpen: false,
+    onConfirm: () => {},
+    message: ""
+  });
   
   const { cgpa, totalCredits } = calculateCGPA(semesters, universityScale);
 
@@ -46,18 +52,39 @@ export function CgpaTracker() {
   };
 
   const handleDeleteCourse = (semesterId: string, courseId: string) => {
-    if (!confirm("Are you sure you want to delete this course?")) return;
-    const sem = semesters.find(s => s.id === semesterId);
-    if (sem) {
-      updateSemester({
-        ...sem,
-        courses: sem.courses.filter(c => c.id !== courseId)
-      });
-    }
+    setDeleteModal({
+      isOpen: true,
+      message: "Are you sure you want to delete this course?",
+      onConfirm: () => {
+        const sem = semesters.find(s => s.id === semesterId);
+        if (sem) {
+          updateSemester({
+            ...sem,
+            courses: sem.courses.filter(c => c.id !== courseId)
+          });
+        }
+      }
+    });
+  };
+
+  const handleDeleteSemester = (semesterId: string) => {
+    setDeleteModal({
+      isOpen: true,
+      message: "Are you sure you want to delete this entire semester?",
+      onConfirm: () => {
+        deleteSemester(semesterId);
+      }
+    });
   };
 
   return (
     <div className="space-y-8">
+      <ConfirmModal 
+        isOpen={deleteModal.isOpen} 
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))} 
+        onConfirm={deleteModal.onConfirm}
+        message={deleteModal.message}
+      />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">CGPA Tracker</h1>
@@ -124,11 +151,7 @@ export function CgpaTracker() {
                   <Button variant="outline" size="sm" onClick={() => handleAddCourse(sem.id)} className="rounded-xl border-slate-200 dark:border-slate-700 font-bold px-4">
                     <Plus className="mr-2 h-4 w-4" /> Add Course
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => {
-                    if (confirm("Are you sure you want to delete this entire semester?")) {
-                      deleteSemester(sem.id);
-                    }
-                  }} className="rounded-xl hover:bg-red-50 dark:hover:bg-red-950 transition-colors">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteSemester(sem.id)} className="rounded-xl hover:bg-red-50 dark:hover:bg-red-950 transition-colors">
                     <Trash2 className="h-5 w-5 text-red-500" />
                   </Button>
                 </div>

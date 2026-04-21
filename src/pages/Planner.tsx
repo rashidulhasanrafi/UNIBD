@@ -3,10 +3,15 @@ import { useStore, Task } from "@/src/store/useStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/Card";
 import { Input } from "@/src/components/ui/Input";
 import { Button } from "@/src/components/ui/Button";
+import { ConfirmModal } from "@/src/components/ui/ConfirmModal";
 import { parseISO, format, isThisWeek, isFuture, isToday } from "date-fns";
 import { Trash2, CheckCircle2, Circle, AlertCircle, Plus } from "lucide-react";
 
-const TaskItem: React.FC<{ task: Task, toggleTask: (id: string) => void, deleteTask: (id: string) => void }> = ({ task, toggleTask, deleteTask }) => (
+const TaskItem: React.FC<{ 
+  task: Task, 
+  toggleTask: (id: string) => void, 
+  onDeleteReq: (id: string) => void 
+}> = ({ task, toggleTask, onDeleteReq }) => (
   <div className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
     task.completed ? 'bg-slate-50 border-slate-100 dark:bg-slate-900/50 dark:border-slate-800' 
     : 'bg-white border-slate-200 dark:bg-slate-950 dark:border-slate-800'
@@ -33,11 +38,7 @@ const TaskItem: React.FC<{ task: Task, toggleTask: (id: string) => void, deleteT
         </span>
       </div>
     </div>
-    <Button type="button" variant="ghost" size="icon" onClick={() => {
-      if (confirm("Are you sure you want to delete this task?")) {
-        deleteTask(task.id);
-      }
-    }}>
+    <Button type="button" variant="ghost" size="icon" onClick={() => onDeleteReq(task.id)}>
       <Trash2 className="h-4 w-4 text-red-500" />
     </Button>
   </div>
@@ -50,6 +51,20 @@ export function Planner() {
     date: format(new Date(), 'yyyy-MM-dd'),
     type: "Assignment",
   });
+
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; onConfirm: () => void; message: string }>({
+    isOpen: false,
+    onConfirm: () => {},
+    message: ""
+  });
+
+  const reqDeleteTask = (id: string) => {
+    setDeleteModal({
+      isOpen: true,
+      message: "Are you sure you want to delete this task?",
+      onConfirm: () => deleteTask(id)
+    });
+  };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +85,12 @@ export function Planner() {
 
   return (
     <div className="space-y-8">
+      <ConfirmModal 
+        isOpen={deleteModal.isOpen} 
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))} 
+        onConfirm={deleteModal.onConfirm}
+        message={deleteModal.message}
+      />
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">Weekly Planner</h1>
         <p className="mt-2 text-slate-500 dark:text-slate-400">Keep track of your assignments, exams, and important tasks</p>
@@ -118,7 +139,7 @@ export function Planner() {
             <p className="text-sm text-slate-500">No tasks scheduled for this week. Enjoy your free time!</p>
           ) : (
             <div className="space-y-3">
-              {thisWeekTasks.map(task => <TaskItem key={task.id} task={task} toggleTask={toggleTask} deleteTask={deleteTask} />)}
+              {thisWeekTasks.map(task => <TaskItem key={task.id} task={task} toggleTask={toggleTask} onDeleteReq={reqDeleteTask} />)}
             </div>
           )}
         </div>
@@ -129,7 +150,7 @@ export function Planner() {
             <p className="text-sm text-slate-500">No upcoming tasks.</p>
           ) : (
             <div className="space-y-3">
-              {upcomingTasks.map(task => <TaskItem key={task.id} task={task} toggleTask={toggleTask} deleteTask={deleteTask} />)}
+              {upcomingTasks.map(task => <TaskItem key={task.id} task={task} toggleTask={toggleTask} onDeleteReq={reqDeleteTask} />)}
             </div>
           )}
         </div>
